@@ -8,6 +8,63 @@ import { convertDanAny } from './dan-any.js';
 // danmu处理相关函数
 // =====================
 
+// 红果表情映射表（可根据实际弹幕中的表情名称增补）
+const HONGGUO_EMOJI_MAP = {
+    "微笑": "🙂",
+    "偷笑": "🤭",
+    "笑": "😁",
+    "什么": "😕",
+    "害羞": "😳",
+    "爱慕": "😍",
+    "飞吻": "😘",
+    "奸笑": "😏",
+    "尬笑": "😅",
+    "思考": "🤔",
+    "撇嘴": "😒",
+    "做鬼脸": "😜",
+    "酷": "😎",
+    "翻白眼": "🙄",
+    "惊呆": "😲",
+    "震惊": "😱",
+    "送心": "🥰",
+    "委屈": "🥺",
+    "快哭了": "🥹",
+    "笑哭": "😂",
+    "哭": "😭",
+    "大笑": "😆",
+    "舔屏": "😋",
+    "怒": "😠",
+    "捂脸": "🤦",
+    "吐": "🤮",
+    "恐惧": "😨",
+    "抓狂": "😫",
+    "敬礼": "🫡",
+    "石化": "😦",
+    "OK": "👌",
+    "赞": "👍",
+    "爱心": "❤️",
+    "伤心": "💔",
+    "KISS": "💋",
+    "懂了": "🤓",
+    "探究": "🧐",
+    "重拳出击": "👊",
+    "吃瓜": "🍉",
+    "盯": "👀",
+    "你细品": "🍵",
+    "赶稿中": "✍️",
+    "注意": "⚠️",
+    "饱了": "🤤",
+    "码住": "⭐",
+    "学会了": "✅",
+    "顶帖": "📌",
+    "求爆更": "📢",
+    "求关注": "🙋",
+    "爽": "🥳",
+    "鼓掌": "👏",
+    "没看够": "🤩",
+    "送花": "🌹"
+};
+
 /**
  * 对弹幕进行分组、去重和计数处理
  * @param {Array} filteredDanmus 已过滤屏蔽词的弹幕列表
@@ -104,7 +161,7 @@ export function groupDanmusByMinute(filteredDanmus, n, isMultiSource = false) {
         cid: data.cid,
         p: newP,
         // 仅当计算后的逻辑计数大于1时才显示 "x N"
-        m: displayCount > 1 ? `${message}\u200Ax\u200A${displayCount}` : message,
+        m: displayCount > 1 ? `${message}\u200A×${displayCount}` : message,
         t: data.earliestT,
         like: data.like, // 包含合并后的like字段
         ...(data.color_v2 !== undefined ? { color_v2: data.color_v2 } : {})
@@ -329,6 +386,19 @@ export function buildGradientSampler(rawStops) {
   };
 }
 
+function replaceEmoji(text) {
+  // 替换 [表情名] 格式的文本
+  return text.replace(/\[([^\]]+)\]/g, (match, name) => {
+    // 先在映射表中查找
+    if (HONGGUO_EMOJI_MAP[name]) {
+      return HONGGUO_EMOJI_MAP[name];
+    }
+    // 如果映射表中没有，尝试直接用方括号内的文字作为emoji显示
+    // 或者返回原始文本不做替换
+    return match;
+  });
+}
+
 export function convertToDanmakuJson(contents, platform) {
   let danmus = [];
   let cidCounter = 1;
@@ -445,6 +515,12 @@ export function convertToDanmakuJson(contents, platform) {
     : globals.danmuSimplifiedTraditional === 'traditional'
       ? traditionalized
       : null;
+  
+  // 表情替换
+  danmus = danmus.map(danmu => ({
+    ...danmu,
+    m: typeof danmu.m === 'string' ? replaceEmoji(danmu.m) : danmu.m
+  }));
 
   if (textConverter) {
     danmus = danmus.map(danmu => ({
